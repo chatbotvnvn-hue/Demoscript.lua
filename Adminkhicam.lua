@@ -7,7 +7,7 @@ local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao1
 
 local Window = redzlib:MakeWindow({
   Title = "Doors Hub | Fixed",
-  SubTitle = "by redz9999 | v3.0",
+  SubTitle = "by khỉ cam| v3.0",
   SaveFolder = "DoorsHub_Fixed"
 })
 
@@ -791,4 +791,5 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 print("Doors Hub Fixed Version Loaded!")
+
  
