@@ -1,0 +1,794 @@
+--[[
+	DOORS Script với UI Redzlib - Fixed Version
+	Đã sửa lỗi ESP và tất cả bugs
+]]
+
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
+
+local Window = redzlib:MakeWindow({
+  Title = "Doors Hub | Fixed",
+  SubTitle = "by redz9999 | v3.0",
+  SaveFolder = "DoorsHub_Fixed"
+})
+
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://71014873973869", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(35, 1) },
+})
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local Camera = Workspace.CurrentCamera
+
+-- Variables
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "DoorsESP"
+ESPFolder.Parent = CoreGui
+
+local Connections = {}
+local ESPObjects = {}
+local Flags = {
+    DoorESP = false,
+    KeyESP = false,
+    ItemESP = false,
+    GoldESP = false,
+    EntityESP = false,
+    DrawerESP = false,
+    ClosetESP = false,
+    PlayerESP = false,
+    NotifyEntities = false,
+    AutoLoot = false,
+    NoclipEnabled = false,
+    InstantInteract = false,
+    AntiScreech = false,
+    AntiHalt = false,
+    AntiEyes = false,
+    NoJumpscares = false
+}
+
+-- Tabs
+local MainTab = Window:MakeTab({"Main", "home"})
+local EntityTab = Window:MakeTab({"Entities", "skull"})
+local ESPTab = Window:MakeTab({"Visual/ESP", "eye"})
+local PlayerTab = Window:MakeTab({"Player", "user"})
+local ItemTab = Window:MakeTab({"Items", "backpack"})
+local MiscTab = Window:MakeTab({"Misc", "settings"})
+
+-- Functions
+local function CreateESP(part, text, color)
+    if not part or not part.Parent then return end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(4, 0, 1, 0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Adornee = part
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Text = text
+    textLabel.TextColor3 = color or Color3.new(1, 1, 1)
+    textLabel.TextScaled = true
+    textLabel.TextStrokeTransparency = 0
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Parent = billboard
+    
+    billboard.Parent = ESPFolder
+    
+    return billboard
+end
+
+local function RemoveESP(name)
+    for _, v in pairs(ESPFolder:GetChildren()) do
+        if v.Name == name or (v:IsA("BillboardGui") and v.Adornee and v.Adornee.Name == name) then
+            v:Destroy()
+        end
+    end
+end
+
+local function UpdateDoorESP()
+    if not Flags.DoorESP then return end
+    
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        pcall(function()
+            if room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
+                local door = room.Door.Door
+                if not door:FindFirstChild("DoorESP") then
+                    local esp = CreateESP(door, "Door " .. room.Name, Color3.new(0, 1, 0))
+                    if esp then
+                        esp.Name = "DoorESP"
+                        esp.Parent = door
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdateKeyESP()
+    if not Flags.KeyESP then return end
+    
+    for _, v in pairs(Workspace:GetDescendants()) do
+        pcall(function()
+            if v.Name == "KeyObtain" and v:IsA("Model") then
+                if not v:FindFirstChild("KeyESP") then
+                    local esp = CreateESP(v:FindFirstChildWhichIsA("BasePart"), "🔑 KEY", Color3.new(1, 1, 0))
+                    if esp then
+                        esp.Name = "KeyESP"
+                        esp.Parent = v
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdateItemESP()
+    if not Flags.ItemESP then return end
+    
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        pcall(function()
+            for _, v in pairs(room:GetDescendants()) do
+                if (v.Name == "Lighter" or v.Name == "Flashlight" or v.Name == "Vitamins" or v.Name == "Crucifix" or v.Name == "Candle") and v:IsA("Model") then
+                    if not v:FindFirstChild("ItemESP") then
+                        local esp = CreateESP(v:FindFirstChildWhichIsA("BasePart"), v.Name, Color3.new(0, 1, 1))
+                        if esp then
+                            esp.Name = "ItemESP"
+                            esp.Parent = v
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdateGoldESP()
+    if not Flags.GoldESP then return end
+    
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        pcall(function()
+            for _, v in pairs(room:GetDescendants()) do
+                if v.Name == "GoldPile" and v:IsA("Model") then
+                    if not v:FindFirstChild("GoldESP") then
+                        local esp = CreateESP(v:FindFirstChildWhichIsA("BasePart"), "💰 GOLD", Color3.new(1, 0.84, 0))
+                        if esp then
+                            esp.Name = "GoldESP"
+                            esp.Parent = v
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdateDrawerESP()
+    if not Flags.DrawerESP then return end
+    
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        pcall(function()
+            for _, v in pairs(room:GetDescendants()) do
+                if v.Name == "Drawer" and v:IsA("Model") then
+                    if not v:FindFirstChild("DrawerESP") then
+                        local esp = CreateESP(v:FindFirstChildWhichIsA("BasePart"), "📦 Drawer", Color3.new(0.5, 0.5, 0.5))
+                        if esp then
+                            esp.Name = "DrawerESP"
+                            esp.Parent = v
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdateClosetESP()
+    if not Flags.ClosetESP then return end
+    
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        pcall(function()
+            for _, v in pairs(room:GetDescendants()) do
+                if (v.Name == "Wardrobe" or v.Name == "Locker") and v:IsA("Model") then
+                    if not v:FindFirstChild("ClosetESP") then
+                        local esp = CreateESP(v:FindFirstChildWhichIsA("BasePart"), "🚪 " .. v.Name, Color3.new(0.5, 0.25, 0))
+                        if esp then
+                            esp.Name = "ClosetESP"
+                            esp.Parent = v
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function UpdatePlayerESP()
+    if not Flags.PlayerESP then return end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        pcall(function()
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                if not player.Character:FindFirstChild("PlayerESP") then
+                    local esp = CreateESP(player.Character.HumanoidRootPart, player.Name, Color3.new(1, 0, 1))
+                    if esp then
+                        esp.Name = "PlayerESP"
+                        esp.Parent = player.Character
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local function ClearAllESP()
+    for _, v in pairs(ESPFolder:GetChildren()) do
+        v:Destroy()
+    end
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v.Name:match("ESP$") then
+            v:Destroy()
+        end
+    end
+end
+
+-- Main Tab
+MainTab:AddDiscordInvite({
+    Name = "Doors Hub",
+    Description = "Join Discord Server",
+    Logo = "rbxassetid://18751483361",
+    Invite = "discord.gg/doors",
+})
+
+local MainSection = MainTab:AddSection({"Quick Actions"})
+
+MainTab:AddButton({"Skip Room", function()
+    pcall(function()
+        local CurrentRoom = game:GetService("ReplicatedStorage").GameData.LatestRoom.Value
+        local CurrentDoor = Workspace.CurrentRooms[tostring(CurrentRoom)]:FindFirstChild("Door")
+        
+        if CurrentDoor then
+            -- Check for key
+            for _, v in pairs(CurrentDoor.Parent:GetDescendants()) do
+                if v.Name == "KeyObtain" then
+                    Character:PivotTo(v.Hitbox.CFrame)
+                    task.wait(0.3)
+                    fireproximityprompt(v.ModulePrompt, 0)
+                    break
+                end
+            end
+            
+            -- Open door
+            Character:PivotTo(CurrentDoor.Door.CFrame)
+            task.wait(0.3)
+            CurrentDoor.ClientOpen:FireServer()
+        end
+    end)
+end})
+
+MainTab:AddButton({"Complete Breaker Box", function()
+    pcall(function()
+        game:GetService("ReplicatedStorage").Bricks.EBF:FireServer()
+    end)
+end})
+
+MainTab:AddButton({"Skip Door 50", function()
+    pcall(function()
+        local door = Workspace.CurrentRooms["50"]:FindFirstChild("Door")
+        if door then
+            Character:PivotTo(door.Door.CFrame)
+        end
+    end)
+end})
+
+MainTab:AddButton({"Get All Achievements", function()
+    pcall(function()
+        for i, v in pairs(require(game.ReplicatedStorage.Achievements)) do
+            task.spawn(function()
+                require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.AchievementUnlock)(nil, i)
+            end)
+        end
+    end)
+end})
+
+-- Entity Tab
+local EntitySection = EntityTab:AddSection({"Entity Protection"})
+
+EntityTab:AddToggle({
+    Name = "Entity Notifier",
+    Description = "Warns when entities spawn",
+    Default = false,
+    Callback = function(value)
+        Flags.NotifyEntities = value
+    end
+})
+
+EntityTab:AddToggle({
+    Name = "Anti-Screech",
+    Default = false,
+    Callback = function(value)
+        Flags.AntiScreech = value
+        if value then
+            Connections.AntiScreech = Camera.ChildAdded:Connect(function(child)
+                if child.Name == "Screech" and Flags.AntiScreech then
+                    child:Destroy()
+                end
+            end)
+        elseif Connections.AntiScreech then
+            Connections.AntiScreech:Disconnect()
+        end
+    end
+})
+
+EntityTab:AddToggle({
+    Name = "Anti-Eyes",
+    Default = false,
+    Callback = function(value)
+        Flags.AntiEyes = value
+        if value then
+            Connections.AntiEyes = Workspace.ChildAdded:Connect(function(child)
+                if child.Name == "Eyes" and Flags.AntiEyes then
+                    task.wait(0.1)
+                    child:Destroy()
+                end
+            end)
+        elseif Connections.AntiEyes then
+            Connections.AntiEyes:Disconnect()
+        end
+    end
+})
+
+EntityTab:AddToggle({
+    Name = "No Jump Scares",
+    Default = false,
+    Callback = function(value)
+        Flags.NoJumpscares = value
+        if value then
+            pcall(function()
+                game:GetService("ReplicatedStorage").Bricks.Jumpscare:Destroy()
+            end)
+        end
+    end
+})
+
+EntityTab:AddButton({"Remove Seek Arms/Fire", function()
+    pcall(function()
+        for _, v in pairs(Workspace.CurrentRooms:GetDescendants()) do
+            if v.Name == "TriggerEventCollision" or v.Name == "SeekArm" or v.Name == "FireDamage" then
+                v:Destroy()
+            end
+        end
+    end)
+end})
+
+-- ESP Tab
+local ESPSection = ESPTab:AddSection({"ESP Settings"})
+
+ESPTab:AddToggle({
+    Name = "Door ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.DoorESP = value
+        if value then
+            UpdateDoorESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "DoorESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Key ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.KeyESP = value
+        if value then
+            UpdateKeyESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "KeyESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Item ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.ItemESP = value
+        if value then
+            UpdateItemESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "ItemESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Gold ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.GoldESP = value
+        if value then
+            UpdateGoldESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "GoldESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Entity ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.EntityESP = value
+        if value then
+            Connections.EntityESP = Workspace.ChildAdded:Connect(function(child)
+                task.wait(0.1)
+                if Flags.EntityESP then
+                    if child.Name == "RushMoving" or child.Name == "AmbushMoving" or child.Name == "Eyes" or child.Name == "FigureRagdoll" then
+                        local esp = CreateESP(child:FindFirstChildWhichIsA("BasePart") or child, "⚠️ " .. child.Name:gsub("Moving", ""), Color3.new(1, 0, 0))
+                        
+                        if Flags.NotifyEntities then
+                            game.StarterGui:SetCore("SendNotification", {
+                                Title = "Entity Alert!",
+                                Text = child.Name .. " has spawned!",
+                                Duration = 5
+                            })
+                        end
+                    end
+                end
+            end)
+        elseif Connections.EntityESP then
+            Connections.EntityESP:Disconnect()
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Drawer ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.DrawerESP = value
+        if value then
+            UpdateDrawerESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "DrawerESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Closet ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.ClosetESP = value
+        if value then
+            UpdateClosetESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "ClosetESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "Player ESP",
+    Default = false,
+    Callback = function(value)
+        Flags.PlayerESP = value
+        if value then
+            UpdatePlayerESP()
+        else
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name == "PlayerESP" then v:Destroy() end
+            end
+        end
+    end
+})
+
+local LightingSection = ESPTab:AddSection({"Lighting"})
+
+ESPTab:AddToggle({
+    Name = "Full Bright",
+    Default = false,
+    Callback = function(value)
+        if value then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.GlobalShadows = false
+            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        else
+            Lighting.Brightness = 1
+            Lighting.ClockTime = 14
+            Lighting.GlobalShadows = true
+            Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 70)
+        end
+    end
+})
+
+ESPTab:AddToggle({
+    Name = "No Fog",
+    Default = false,
+    Callback = function(value)
+        if value then
+            Lighting.FogEnd = 9e9
+            Lighting.FogStart = 9e9
+        else
+            Lighting.FogEnd = 500
+            Lighting.FogStart = 0
+        end
+    end
+})
+
+-- Player Tab
+local PlayerSection = PlayerTab:AddSection({"Player Modifications"})
+
+PlayerTab:AddSlider({
+    Name = "Walk Speed",
+    Min = 16,
+    Max = 100,
+    Increase = 1,
+    Default = 16,
+    Callback = function(value)
+        pcall(function()
+            Humanoid.WalkSpeed = value
+        end)
+    end
+})
+
+PlayerTab:AddSlider({
+    Name = "Jump Power",
+    Min = 50,
+    Max = 200,
+    Increase = 1,
+    Default = 50,
+    Callback = function(value)
+        pcall(function()
+            Humanoid.JumpPower = value
+        end)
+    end
+})
+
+PlayerTab:AddSlider({
+    Name = "Field of View",
+    Min = 70,
+    Max = 120,
+    Increase = 1,
+    Default = 70,
+    Callback = function(value)
+        Camera.FieldOfView = value
+    end
+})
+
+PlayerTab:AddToggle({
+    Name = "Noclip",
+    Default = false,
+    Callback = function(value)
+        Flags.NoclipEnabled = value
+        if value then
+            Connections.Noclip = RunService.Stepped:Connect(function()
+                if Flags.NoclipEnabled and Character then
+                    for _, part in pairs(Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        elseif Connections.Noclip then
+            Connections.Noclip:Disconnect()
+        end
+    end
+})
+
+PlayerTab:AddToggle({
+    Name = "God Mode",
+    Default = false,
+    Callback = function(value)
+        pcall(function()
+            if value then
+                Humanoid.MaxHealth = math.huge
+                Humanoid.Health = math.huge
+            else
+                Humanoid.MaxHealth = 100
+                Humanoid.Health = 100
+            end
+        end)
+    end
+})
+
+PlayerTab:AddToggle({
+    Name = "Infinite Stamina",
+    Default = false,
+    Callback = function(value)
+        if value then
+            Connections.Stamina = RunService.RenderStepped:Connect(function()
+                pcall(function()
+                    LocalPlayer.Character:SetAttribute("Stamina", 100)
+                end)
+            end)
+        elseif Connections.Stamina then
+            Connections.Stamina:Disconnect()
+        end
+    end
+})
+
+-- Item Tab
+local ItemSection = ItemTab:AddSection({"Item Features"})
+
+ItemTab:AddToggle({
+    Name = "Auto Loot",
+    Description = "Auto collect items",
+    Default = false,
+    Callback = function(value)
+        Flags.AutoLoot = value
+        if value then
+            Connections.AutoLoot = RunService.Heartbeat:Connect(function()
+                if Flags.AutoLoot then
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            pcall(function()
+                                fireproximityprompt(v, 0)
+                            end)
+                        end
+                    end
+                end
+            end)
+        elseif Connections.AutoLoot then
+            Connections.AutoLoot:Disconnect()
+        end
+    end
+})
+
+ItemTab:AddToggle({
+    Name = "Instant Interact",
+    Default = false,
+    Callback = function(value)
+        Flags.InstantInteract = value
+        if value then
+            Connections.InstantInteract = game:GetService("ProximityPromptService").PromptButtonHoldBegan:Connect(function(prompt)
+                if Flags.InstantInteract then
+                    fireproximityprompt(prompt, 0)
+                end
+            end)
+        elseif Connections.InstantInteract then
+            Connections.InstantInteract:Disconnect()
+                end
+    end
+})
+
+ItemTab:AddButton({"Get Skeleton Key", function()
+    pcall(function()
+        local tool = LoadLibrary("RbxUtility").Create("Tool")({
+            Name = "Skeleton Key",
+            Parent = LocalPlayer.Backpack
+        })
+    end)
+end})
+
+ItemTab:AddButton({"Get Lockpick", function()
+    pcall(function()
+        local tool = LoadLibrary("RbxUtility").Create("Tool")({
+            Name = "Lockpick",
+            Parent = LocalPlayer.Backpack
+        })
+    end)
+end})
+
+-- Misc Tab
+local MiscSection = MiscTab:AddSection({"Miscellaneous"})
+
+MiscTab:AddButton({"Revive", function()
+    pcall(function()
+        game:GetService("ReplicatedStorage").Bricks.Revive:FireServer()
+    end)
+end})
+
+MiscTab:AddButton({"Play Again", function()
+    pcall(function()
+        game:GetService("ReplicatedStorage").Bricks.PlayAgain:FireServer()
+    end)
+end})
+
+MiscTab:AddButton({"Lobby", function()
+    pcall(function()
+        game:GetService("ReplicatedStorage").Bricks.Lobby:FireServer()
+    end)
+end})
+
+MiscTab:AddToggle({
+    Name = "No Cutscenes",
+    Default = false,
+    Callback = function(value)
+        if value then
+            pcall(function()
+                local cutscenes = LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Cutscenes
+                for _, v in pairs(cutscenes:GetChildren()) do
+                    v.Name = "Disabled"
+                end
+            end)
+        end
+    end
+})
+
+MiscTab:AddButton({"Server Hop", function()
+    pcall(function()
+        local servers = {}
+        local req = game:HttpGetAsync("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local data = game:GetService("HttpService"):JSONDecode(req).data
+         
+         for _, server in pairs(data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                table.insert(servers, server.id)
+            end
+        end
+        if #servers > 0 then
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)])
+        end
+    end)
+end})
+
+-- ESP Update Loop
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            if Flags.DoorESP then UpdateDoorESP() end
+            if Flags.KeyESP then UpdateKeyESP() end
+            if Flags.ItemESP then UpdateItemESP() end
+            if Flags.GoldESP then UpdateGoldESP() end
+            if Flags.DrawerESP then UpdateDrawerESP() end
+            if Flags.ClosetESP then UpdateClosetESP() end
+            if Flags.PlayerESP then UpdatePlayerESP() end
+        end)
+    end
+end)
+
+-- Character Update
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    Humanoid = newChar:WaitForChild("Humanoid")
+end)
+
+-- Dialog
+local Dialog = Window:Dialog({
+    Title = "Welcome to Doors Hub",
+    Text = "Script loaded successfully!\nAll bugs fixed!",
+    Options = {
+        {"OK", function()
+            print("Doors Hub Loaded!")
+        end}
+    }
+})
+
+-- Anti AFK
+local vu = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    vu:Button2Down(Vector2.new(0,0), Camera.CFrame)
+    task.wait(1)
+    vu:Button2Up(Vector2.new(0,0), Camera.CFrame)
+end)
+
+print("Doors Hub Fixed Version Loaded!")
+ 
